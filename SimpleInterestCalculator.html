@@ -1,0 +1,225 @@
+
+
+<!DOCTYPE HTML>
+<html>
+
+<title></title>
+
+<head></head>
+
+<body>
+
+<p><b>Enter Loan Data:</b></p>
+<p>Amount of the loan($):<input id="txt_loan"></input></p>
+<p>Annual interest(%):<input id="txt_interest"></input></p>
+<p>Repayment period (years):<input id="txt_years"></input></p>
+<p>Zipcode:<input></input></p>
+
+<hr></hr>
+
+<p><b>Approximate Payments:</b> <button id="btn_calculate" onclick="displayFunction()">Calculate</button></p>
+<p>Month payments:<b><u id="txt_outMonthPay"></u></b></p>
+<p>Total payment:<b id="txt_outTotalPay"></b></p>
+<p>Total interest:<b id="txt_outTotalInterest"></b></p>
+
+<hr></hr>
+
+<p><b>Loan Balance, Cumulative Equity, and Interest Payments</b></p>
+<canvas id="aCanvas" width=400	height=250></canvas>
+
+</body>
+
+<script>
+var canvas = document.getElementById("aCanvas");
+var c = canvas.getContext("2d");
+
+//Calculate monthly payments
+/*
+P = Princinpal.
+R = Annual Interest Rate.
+N = Number of payments.*/
+function  calculateMonthlyPay(P,R,N)
+{
+	return ((P*Math.pow(1+(R/100)/12,N)*(R/100)/12)/(Math.pow(1+(R/100)/12,N)-1));
+}
+
+function calculateTotalPay(monthlyPayments, months)
+{
+	return monthlyPayments*months;
+}
+
+function calculateTotalInterest(totalPay, loan)
+{
+	return totalPay - loan;
+}
+
+function yToPlot(loan)
+{
+	return 250-loan;
+}
+
+function yCoordUnit(totalPay,height)
+{
+	return totalPay/height;
+}
+
+function setGraphMaxAmount(totalPay)
+{
+	var a = totalPay%100000;
+	return ((totalPay-a)+100000);
+}
+
+//Y = years.
+function displayFunction()
+{
+	//P = Princinpal.
+	//R = Annual Interest Rate.
+	//N = Number of payments.
+
+	//Get and set input values.
+	var P,R,N;
+	P =	document.getElementById("txt_loan").value;
+	R = document.getElementById("txt_interest").value;
+	N = document.getElementById("txt_years").value;
+	
+	var monthlyPayments = calculateMonthlyPay(P,R,N*12).toFixed(2);
+	var totalPay = calculateTotalPay(calculateMonthlyPay(P,R,N*12), (N*12)).toFixed(2);
+	var totalInterest = calculateTotalInterest(((calculateMonthlyPay(P,R,N*12)*(N*12))), P).toFixed(2);
+	
+	var maxYGraphValue = setGraphMaxAmount(totalPay);
+	
+	document.getElementById("txt_outMonthPay").innerHTML = "$"+monthlyPayments;
+	document.getElementById("txt_outTotalPay").innerHTML = "$"+totalPay;
+	document.getElementById("txt_outTotalInterest").innerHTML = "$"+totalInterest;
+	
+	//Clears to redraw on canvas for other calculations
+	c.clearRect(0,0,canvas.width, canvas.height);
+	
+	//Draw totalPay Graph
+	c.beginPath();
+	c.moveTo(0,250);
+	c.lineTo(400,yToPlot(((totalPay)/(maxYGraphValue/canvas.height))));
+	c.lineTo(400,400);
+	c.closePath();
+	c.fillStyle = "#33ccff";
+	c.fill();
+	
+	//Draw xEquity Graph
+	var loanBalance = P;
+	for(xloanBalanceDraw=0;xloanBalanceDraw<=(N*12);xloanBalanceDraw++)
+	{
+		if(xloanBalanceDraw==0)
+		{
+			c.beginPath();
+			c.moveTo(0,yToPlot(((P-loanBalance)/(maxYGraphValue/canvas.height))));
+		}
+		else
+		{
+			loanBalance = loanBalance-monthlyPayments+(((R/100)/12)*loanBalance)
+			c.lineTo(0+(xloanBalanceDraw*(canvas.width/(N*12))),yToPlot(((P-loanBalance)/(maxYGraphValue/canvas.height))))
+		}
+	}
+	c.lineTo(400,400);
+	c.closePath();
+	c.fillStyle = "ORANGE";
+	c.fill();
+	
+	
+	//Draw loanBalance Graph
+	var loanBalance = P;
+	for(xloanBalanceDraw=0;xloanBalanceDraw<=(N*12);xloanBalanceDraw++)
+	{
+		if(xloanBalanceDraw==0)
+		{
+			c.beginPath();
+			c.moveTo(0,yToPlot(((loanBalance)/(maxYGraphValue/canvas.height))));
+		}
+		else
+		{
+			loanBalance = loanBalance-monthlyPayments+(((R/100)/12)*loanBalance)
+			c.lineTo(0+(xloanBalanceDraw*(canvas.width/(N*12))),yToPlot(((loanBalance)/(maxYGraphValue/canvas.height))))
+		}
+	}
+	c.lineTo(0,400);
+	c.closePath();
+	c.lineWidth = 2;
+	c.strokeStyle = "MAGENTA";
+	c.stroke();
+	c.strokeStyle = "black"
+	
+	
+	//Draw graph box
+	c.beginPath();
+	c.rect(0,0,canvas.width,canvas.height);
+	c.lineWidth = 2;
+	c.stroke();
+	
+	//plot x axis
+	for(xPlotAxis=0;xPlotAxis<N;xPlotAxis++)
+	{
+		//plot year notches
+		c.beginPath();
+		c.moveTo(0+(xPlotAxis*(canvas.width/N)),250);
+		c.lineTo(0+(xPlotAxis*(canvas.width/N)),246);
+		c.lineWidth = 1;
+		c.stroke();
+		
+		//plot year values
+		if(xPlotAxis==0)
+		{
+			c.font = 'bold 8pt Arial';
+			c.fillStyle = 'black';
+			c.fillText("Year",0+(xPlotAxis*(canvas.width/N)), 240)
+		}
+		else if(xPlotAxis%5==0)
+		{
+			c.font = 'bold 8pt Arial';
+			c.fillStyle = 'black';
+			c.fillText(xPlotAxis,0+(xPlotAxis*(canvas.width/N)), 240)
+		}
+	}
+	
+
+	//plot (LOAN)
+		//plot money notch
+		c.beginPath();
+		c.moveTo(400,yToPlot(((P)/(maxYGraphValue/canvas.height))));
+		c.lineTo(390,yToPlot(((P)/(maxYGraphValue/canvas.height))));
+		c.lineWidth = 2;
+		c.stroke();
+		//plot money value
+		c.font = 'bold 8pt Arial';
+		c.fillStyle = 'black';
+		c.fillText("$"+Math.round(P),345,yToPlot(((P)/(maxYGraphValue/canvas.height))-3))
+	
+	//plot Total Payment
+		//plot money notch
+		c.beginPath();
+		c.moveTo(400,yToPlot(((totalPay)/(maxYGraphValue/canvas.height))));
+		c.lineTo(390,yToPlot(((totalPay)/(maxYGraphValue/canvas.height))));
+		c.lineWidth = 2;
+		c.stroke();
+		//plot money value
+		c.font = 'bold 8pt Arial';
+		c.fillStyle = 'black';
+		c.fillText("$"+Math.round(totalPay),345,yToPlot(((totalPay)/(maxYGraphValue/canvas.height))-3));
+		
+	//plot legend
+	c.font = 'bold 8pt Arial';
+	c.fillStyle = "MAGENTA";
+	c.fillText("Loan Balance",15,20);
+	c.font = 'bold 8pt Arial';
+	c.fillStyle = '#33ccff';
+	c.fillText("Total Interest Payments",15,50);
+	c.font = 'bold 8pt Arial';
+	c.fillStyle = 'ORANGE';
+	c.fillText("Total Equity",15,35);
+}
+//document.writeln(txt_annualInterest);
+//document.writeln(txt_years);
+//document.writeln(txt_months);
+
+//Written by Daniel Robin Cherrin.
+//Last revised: 10-Oct-2017.
+</script>
+</html>
